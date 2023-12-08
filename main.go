@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"inxo.ru/sync/utils"
 	"path/filepath"
 
@@ -42,8 +43,15 @@ func main() {
 		log.Fatal(".env file not loaded or missing required variables")
 	}
 
+	s3Config := &aws.Config{
+		Credentials:      credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), ""),
+		Endpoint:         aws.String(os.Getenv("AWS_ENDPOINT")),
+		Region:           aws.String(os.Getenv("AWS_REGION")),
+		S3ForcePathStyle: aws.Bool(true),
+	}
+
 	// Create a new AWS session
-	sess, err := session.NewSession()
+	sess, err := session.NewSession(s3Config)
 	if err != nil {
 		log.Fatal(err)
 	}

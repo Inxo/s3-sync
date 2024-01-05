@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"fyne.io/fyne/v2"
+	"github.com/joho/godotenv"
 	"inxo.ru/sync/sync"
 	"log"
 	"os"
@@ -22,14 +25,28 @@ func main() {
 		Width:  800,
 		Height: 600,
 	})
-
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Cannot get working directory")
+	}
+	err = godotenv.Load(wd + "/.env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	// Load environment variables
 	// S3 Settings Form
 	bucketEntry := widget.NewEntry()
+	bucketEntry.SetText(os.Getenv("BUCKET_NAME"))
 	regionEntry := widget.NewEntry()
+	regionEntry.SetText(os.Getenv("AWS_REGION"))
 	idEntry := widget.NewEntry()
+	idEntry.SetText(os.Getenv("AWS_ACCESS_KEY_ID"))
 	tokenEntry := widget.NewEntry()
+	tokenEntry.SetText(os.Getenv("AWS_SECRET_ACCESS_KEY"))
 	endpointEntry := widget.NewEntry()
+	endpointEntry.SetText(os.Getenv("AWS_ENDPOINT"))
 	localPathEntry := widget.NewEntry()
+	localPathEntry.SetText(os.Getenv("LOCAL_PATH"))
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{
@@ -50,24 +67,70 @@ func main() {
 			localPath := localPathEntry.Text
 
 			// Perform synchronization using the provided S3 settings and local path
+			saveData(myWindow, bucket, endpoint, region, id, token, localPath, wd)
+		},
+		SubmitText: "Save",
+	}
+
+	syncForm := &widget.Form{
+		Items: []*widget.FormItem{},
+		OnSubmit: func() {
+			// Handle form submission
+			bucket := bucketEntry.Text
+			region := regionEntry.Text
+			token := tokenEntry.Text
+			id := idEntry.Text
+			endpoint := endpointEntry.Text
+			localPath := localPathEntry.Text
+
+			// Perform synchronization using the provided S3 settings and local path
 			syncData(myWindow, bucket, endpoint, region, id, token, localPath)
 		},
+		SubmitText: "Sync",
 	}
 
 	// Combine forms into a tab container
 	tabs := container.NewAppTabs(
-		container.NewTabItem("S3 Settings", container.New(layout.NewVBoxLayout(), form)),
+		container.NewTabItem("Sync", container.New(layout.NewVBoxLayout(), syncForm)),
+		container.NewTabItem("Settings", container.New(layout.NewVBoxLayout(), form)),
 	)
 
 	// Set the icon for the application (optional)
-	myWindow.SetIcon(theme.FyneLogo())
+	myWindow.SetIcon(theme.AccountIcon())
 
 	myWindow.SetContent(container.NewVBox(
-		container.NewHBox(widget.NewLabel("S3 Sync App")),
+		container.NewHBox(widget.NewLabel("Awesome Sync App - free and open source. Made ❤️ with love in 🇹🇭")),
 		tabs,
 	))
 
 	myWindow.ShowAndRun()
+}
+
+func saveData(myWindow fyne.Window, bucket string, endpoint string, region string, id string, token string, path string, wd string) {
+	file, err := os.Create(wd + "/.env")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
+
+	writer := bufio.NewWriter(file)
+	_, _ = fmt.Fprintf(writer, "LOCAL_PATH=%s\n", path)
+	_, _ = fmt.Fprintf(writer, "BUCKET_NAME=%s\n", bucket)
+	_, _ = fmt.Fprintf(writer, "AWS_ACCESS_KEY_ID=%s\n", id)
+	_, _ = fmt.Fprintf(writer, "AWS_ENDPOINT=%s\n", endpoint)
+	_, _ = fmt.Fprintf(writer, "AWS_SECRET_ACCESS_KEY=%s\n", token)
+	_, _ = fmt.Fprintf(writer, "AWS_REGION=%s\n", region)
+	err = writer.Flush()
+	if err != nil {
+		dialog.ShowError(err, myWindow)
+	} else {
+		dialog.ShowInformation("Save Success", "Data save successfully!", myWindow)
+	}
 }
 
 func syncData(myWindow fyne.Window, bucket string, endpoint string, region string, id string, token string, localPath string) {
@@ -78,8 +141,13 @@ func syncData(myWindow fyne.Window, bucket string, endpoint string, region strin
 
 	// You can replace this with your actual synchronization logic
 	if _, err := os.Stat(localPath); err == nil {
-		sync.Sync()
-		dialog.ShowInformation("Sync Success", "Data synchronized successfully!", myWindow)
+		err2 := sync.Sync()
+		if err2 != nil {
+			e := errors.New(err2.Error())
+			dialog.ShowError(e, myWindow)
+		} else {
+			dialog.ShowInformation("Sync Success", "Data synchronized successfully!", myWindow)
+		}
 	} else {
 		log.Println("Error syncing data:", err)
 		dialog.ShowError(err, myWindow)

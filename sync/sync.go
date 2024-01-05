@@ -14,7 +14,7 @@ import (
 	"os"
 )
 
-func Sync() {
+func Sync() error {
 	wd, err := os.Getwd()
 	if err != nil {
 		log.Fatal("Cannot get working directory")
@@ -30,9 +30,9 @@ func Sync() {
 		}
 	}(logfile)
 
-	err = godotenv.Load(wd + "/.env")
+	err = godotenv.Overload(wd + "/.env")
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		return err
 	}
 	// Load environment variables
 	bucketName := os.Getenv("BUCKET_NAME")
@@ -41,6 +41,7 @@ func Sync() {
 	// Validate environment variables
 	if bucketName == "" || localPath == "" {
 		log.Fatal(".env file not loaded or missing required variables")
+		return err
 	}
 
 	s3Config := &aws.Config{
@@ -66,7 +67,7 @@ func Sync() {
 
 	listObjectsOutput, err := svc.ListObjects(listObjectsInput)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Create a map to store existing objects in the bucket
@@ -103,7 +104,12 @@ func Sync() {
 		if err != nil {
 			return err
 		}
-		defer file.Close()
+		defer func(file *os.File) {
+			err := file.Close()
+			if err != nil {
+				log.Println(err)
+			}
+		}(file)
 
 		uploadObjectInput := &s3.PutObjectInput{
 			Bucket: aws.String(bucketName),
@@ -122,8 +128,9 @@ func Sync() {
 	})
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.Println("Sync completed!")
+	return nil
 }

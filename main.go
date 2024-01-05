@@ -1,129 +1,87 @@
 package main
 
 import (
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"inxo.ru/sync/utils"
-	"path/filepath"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/joho/godotenv"
-
+	"fmt"
+	"fyne.io/fyne/v2"
+	"inxo.ru/sync/sync"
 	"log"
 	"os"
+
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 )
 
 func main() {
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Fatal("Cannot get working directory")
-	}
-	logfile := utils.InitLogger(wd)
-	if logfile == nil {
-		log.Fatal("Cannot make log")
-	}
-	defer func(logfile *os.File) {
-		err := logfile.Close()
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-	}(logfile)
-
-	err = godotenv.Load(wd + "/.env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-	// Load environment variables
-	bucketName := os.Getenv("BUCKET_NAME")
-	localPath := os.Getenv("LOCAL_PATH")
-
-	// Validate environment variables
-	if bucketName == "" || localPath == "" {
-		log.Fatal(".env file not loaded or missing required variables")
-	}
-
-	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), ""),
-		Endpoint:         aws.String(os.Getenv("AWS_ENDPOINT")),
-		Region:           aws.String(os.Getenv("AWS_REGION")),
-		S3ForcePathStyle: aws.Bool(true),
-	}
-
-	// Create a new AWS session
-	sess, err := session.NewSession(s3Config)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a new S3 client
-	svc := s3.New(sess)
-
-	// List objects in the bucket
-	listObjectsInput := &s3.ListObjectsInput{
-		Bucket: aws.String(bucketName),
-	}
-
-	listObjectsOutput, err := svc.ListObjects(listObjectsInput)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a map to store existing objects in the bucket
-	existingObjects := make(map[string]bool)
-	for _, object := range listObjectsOutput.Contents {
-		existingObjects[*object.Key] = true
-	}
-
-	// Walk through the local folder and sync files
-	err = filepath.Walk(localPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip directories
-		if info.IsDir() {
-			return nil
-		}
-
-		// Get relative path
-		relPath, err := filepath.Rel(localPath, path)
-		if err != nil {
-			return err
-		}
-
-		// Check if object already exists in the bucket
-		if _, ok := existingObjects[relPath]; ok {
-			log.Printf("Skipping existing object: %s", relPath)
-			return nil
-		}
-
-		// Upload file to S3
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		uploadObjectInput := &s3.PutObjectInput{
-			Bucket: aws.String(bucketName),
-			Key:    aws.String(relPath),
-			Body:   file,
-			ACL:    aws.String("private"),
-		}
-
-		_, err = svc.PutObject(uploadObjectInput)
-		if err != nil {
-			return err
-		}
-
-		log.Printf("Uploaded object: %s", relPath)
-		return nil
+	myApp := app.New()
+	myWindow := myApp.NewWindow("S3 Sync App")
+	myWindow.Resize(fyne.Size{
+		Width:  800,
+		Height: 600,
 	})
 
-	if err != nil {
-		log.Fatal(err)
+	// S3 Settings Form
+	bucketEntry := widget.NewEntry()
+	regionEntry := widget.NewEntry()
+	idEntry := widget.NewEntry()
+	tokenEntry := widget.NewEntry()
+	endpointEntry := widget.NewEntry()
+	localPathEntry := widget.NewEntry()
+
+	form := &widget.Form{
+		Items: []*widget.FormItem{
+			{Text: "Bucket", Widget: bucketEntry},
+			{Text: "Endpoint", Widget: endpointEntry},
+			{Text: "Region", Widget: regionEntry},
+			{Text: "Id", Widget: idEntry},
+			{Text: "Token", Widget: tokenEntry},
+			{Text: "Local Path", Widget: localPathEntry},
+		},
+		OnSubmit: func() {
+			// Handle form submission
+			bucket := bucketEntry.Text
+			region := regionEntry.Text
+			token := tokenEntry.Text
+			id := idEntry.Text
+			endpoint := endpointEntry.Text
+			localPath := localPathEntry.Text
+
+			// Perform synchronization using the provided S3 settings and local path
+			syncData(myWindow, bucket, endpoint, region, id, token, localPath)
+		},
 	}
 
-	log.Println("Sync completed!")
+	// Combine forms into a tab container
+	tabs := container.NewAppTabs(
+		container.NewTabItem("S3 Settings", container.New(layout.NewVBoxLayout(), form)),
+	)
+
+	// Set the icon for the application (optional)
+	myWindow.SetIcon(theme.FyneLogo())
+
+	myWindow.SetContent(container.NewVBox(
+		container.NewHBox(widget.NewLabel("S3 Sync App")),
+		tabs,
+	))
+
+	myWindow.ShowAndRun()
+}
+
+func syncData(myWindow fyne.Window, bucket string, endpoint string, region string, id string, token string, localPath string) {
+	// Implement your synchronization logic here
+	fmt.Printf("Syncing data with S3 settings - Bucket: %s, Region: %s, Token: %s\n", bucket, region, token)
+	fmt.Printf("Syncing data with S3 settings - Endpoint: %s, Id: %s\n", endpoint, id)
+	fmt.Printf("Syncing data with local path: %s\n", localPath)
+
+	// You can replace this with your actual synchronization logic
+	if _, err := os.Stat(localPath); err == nil {
+		sync.Sync()
+		dialog.ShowInformation("Sync Success", "Data synchronized successfully!", myWindow)
+	} else {
+		log.Println("Error syncing data:", err)
+		dialog.ShowError(err, myWindow)
+	}
 }

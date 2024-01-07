@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/driver/desktop"
 	"github.com/joho/godotenv"
 	"inxo.ru/sync/sync"
 	"log"
@@ -20,11 +21,7 @@ import (
 
 func main() {
 	myApp := app.New()
-	myWindow := myApp.NewWindow("S3 Sync App")
-	myWindow.Resize(fyne.Size{
-		Width:  800,
-		Height: 600,
-	})
+
 	wd, err := os.Getwd()
 	if err != nil {
 		log.Fatal("Cannot get working directory")
@@ -47,9 +44,38 @@ func main() {
 	endpointEntry.SetText(os.Getenv("AWS_ENDPOINT"))
 	localPathEntry := widget.NewEntry()
 	localPathEntry.SetText(os.Getenv("LOCAL_PATH"))
-
 	progressEntry := widget.NewProgressBarInfinite()
 	progressEntry.Hide()
+
+	myWindow := myApp.NewWindow("Sync 3000")
+	if desk, ok := myApp.(desktop.App); ok {
+		m := fyne.NewMenu("MyApp",
+			fyne.NewMenuItem("Show", func() {
+				myWindow.Show()
+			}),
+			fyne.NewMenuItem("Sync", func() {
+				// Handle form submission
+				bucket := bucketEntry.Text
+				region := regionEntry.Text
+				token := tokenEntry.Text
+				id := idEntry.Text
+				endpoint := endpointEntry.Text
+				localPath := localPathEntry.Text
+				progress := progressEntry
+
+				// Perform synchronization using the provided S3 settings and local path
+				syncData(myWindow, progress, bucket, endpoint, region, id, token, localPath)
+			}))
+		desk.SetSystemTrayMenu(m)
+	}
+
+	myWindow.Resize(fyne.Size{
+		Width:  800,
+		Height: 600,
+	})
+	myWindow.SetCloseIntercept(func() {
+		myWindow.Hide()
+	})
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{

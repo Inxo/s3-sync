@@ -46,26 +46,40 @@ func main() {
 	localPathEntry.SetText(os.Getenv("LOCAL_PATH"))
 	progressEntry := widget.NewProgressBarInfinite()
 	progressEntry.Hide()
-
 	myWindow := myApp.NewWindow("Sync 3000")
+
+	saveShort := func() {
+		// Handle form submission
+		bucket := bucketEntry.Text
+		region := regionEntry.Text
+		token := tokenEntry.Text
+		id := idEntry.Text
+		endpoint := endpointEntry.Text
+		localPath := localPathEntry.Text
+
+		// Perform save data
+		saveData(myWindow, bucket, endpoint, region, id, token, localPath, wd)
+	}
+
+	syncShort := func() {
+		// Handle form submission
+		bucket := bucketEntry.Text
+		region := regionEntry.Text
+		token := tokenEntry.Text
+		id := idEntry.Text
+		endpoint := endpointEntry.Text
+		localPath := localPathEntry.Text
+		progress := progressEntry
+
+		// Perform synchronization using the provided S3 settings and local path
+		syncData(myWindow, progress, bucket, endpoint, region, id, token, localPath)
+	}
 	if desk, ok := myApp.(desktop.App); ok {
 		m := fyne.NewMenu("MyApp",
 			fyne.NewMenuItem("Show", func() {
 				myWindow.Show()
 			}),
-			fyne.NewMenuItem("Sync", func() {
-				// Handle form submission
-				bucket := bucketEntry.Text
-				region := regionEntry.Text
-				token := tokenEntry.Text
-				id := idEntry.Text
-				endpoint := endpointEntry.Text
-				localPath := localPathEntry.Text
-				progress := progressEntry
-
-				// Perform synchronization using the provided S3 settings and local path
-				syncData(myWindow, progress, bucket, endpoint, region, id, token, localPath)
-			}))
+			fyne.NewMenuItem("Sync", syncShort))
 		desk.SetSystemTrayMenu(m)
 	}
 
@@ -76,7 +90,6 @@ func main() {
 	myWindow.SetCloseIntercept(func() {
 		myWindow.Hide()
 	})
-
 	form := &widget.Form{
 		Items: []*widget.FormItem{
 			{Text: "Bucket", Widget: bucketEntry},
@@ -86,18 +99,7 @@ func main() {
 			{Text: "Token", Widget: tokenEntry},
 			{Text: "Local Path", Widget: localPathEntry},
 		},
-		OnSubmit: func() {
-			// Handle form submission
-			bucket := bucketEntry.Text
-			region := regionEntry.Text
-			token := tokenEntry.Text
-			id := idEntry.Text
-			endpoint := endpointEntry.Text
-			localPath := localPathEntry.Text
-
-			// Perform synchronization using the provided S3 settings and local path
-			saveData(myWindow, bucket, endpoint, region, id, token, localPath, wd)
-		},
+		OnSubmit:   saveShort,
 		SubmitText: "Save",
 	}
 
@@ -105,19 +107,7 @@ func main() {
 		Items: []*widget.FormItem{
 			{Text: "Progress", Widget: progressEntry},
 		},
-		OnSubmit: func() {
-			// Handle form submission
-			bucket := bucketEntry.Text
-			region := regionEntry.Text
-			token := tokenEntry.Text
-			id := idEntry.Text
-			endpoint := endpointEntry.Text
-			localPath := localPathEntry.Text
-			progress := progressEntry
-
-			// Perform synchronization using the provided S3 settings and local path
-			syncData(myWindow, progress, bucket, endpoint, region, id, token, localPath)
-		},
+		OnSubmit:   syncShort,
 		SubmitText: "Sync",
 	}
 

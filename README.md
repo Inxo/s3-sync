@@ -18,7 +18,7 @@ Sync 3000 is a free and open-source application designed for synchronizing data 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your/repository.git
+git clone https://github.com/Inxo/s3-sync.git
 cd repository
 ```
 

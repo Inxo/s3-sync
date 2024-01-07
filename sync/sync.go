@@ -1,21 +1,22 @@
 package sync
 
 import (
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"inxo.ru/sync/utils"
-	"path/filepath"
-
+	"fyne.io/fyne/v2/widget"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/joho/godotenv"
+	"inxo.ru/sync/utils"
+	"path/filepath"
 
 	"log"
 	"os"
 )
 
-func Sync() error {
+func Sync(progress *widget.ProgressBarInfinite) error {
 	wd, err := os.Getwd()
+	progress.Start()
 	if err != nil {
 		log.Fatal("Cannot get working directory")
 	}
@@ -69,7 +70,6 @@ func Sync() error {
 	if err != nil {
 		return err
 	}
-
 	// Create a map to store existing objects in the bucket
 	existingObjects := make(map[string]bool)
 	for _, object := range listObjectsOutput.Contents {
@@ -96,6 +96,7 @@ func Sync() error {
 		// Check if object already exists in the bucket
 		if _, ok := existingObjects[relPath]; ok {
 			log.Printf("Skipping existing object: %s", relPath)
+			delete(existingObjects, relPath)
 			return nil
 		}
 
@@ -126,6 +127,20 @@ func Sync() error {
 		log.Printf("Uploaded object: %s", relPath)
 		return nil
 	})
+	for relPath := range existingObjects {
+		// remove from s3
+		deleteObjectInput := &s3.DeleteObjectInput{
+			Bucket: aws.String(bucketName),
+			Key:    aws.String(relPath),
+		}
+		_, err = svc.DeleteObject(deleteObjectInput)
+		if err != nil {
+			return err
+		}
+		log.Printf("Deleted object: %s", relPath)
+	}
+	//progress.Refresh()
+	progress.Stop()
 
 	if err != nil {
 		return err

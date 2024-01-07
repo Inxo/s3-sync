@@ -48,6 +48,9 @@ func main() {
 	localPathEntry := widget.NewEntry()
 	localPathEntry.SetText(os.Getenv("LOCAL_PATH"))
 
+	progressEntry := widget.NewProgressBarInfinite()
+	progressEntry.Stop()
+
 	form := &widget.Form{
 		Items: []*widget.FormItem{
 			{Text: "Bucket", Widget: bucketEntry},
@@ -73,7 +76,9 @@ func main() {
 	}
 
 	syncForm := &widget.Form{
-		Items: []*widget.FormItem{},
+		Items: []*widget.FormItem{
+			{Text: "Progress", Widget: progressEntry},
+		},
 		OnSubmit: func() {
 			// Handle form submission
 			bucket := bucketEntry.Text
@@ -82,9 +87,10 @@ func main() {
 			id := idEntry.Text
 			endpoint := endpointEntry.Text
 			localPath := localPathEntry.Text
+			progress := progressEntry
 
 			// Perform synchronization using the provided S3 settings and local path
-			syncData(myWindow, bucket, endpoint, region, id, token, localPath)
+			syncData(myWindow, progress, bucket, endpoint, region, id, token, localPath)
 		},
 		SubmitText: "Sync",
 	}
@@ -133,7 +139,7 @@ func saveData(myWindow fyne.Window, bucket string, endpoint string, region strin
 	}
 }
 
-func syncData(myWindow fyne.Window, bucket string, endpoint string, region string, id string, token string, localPath string) {
+func syncData(myWindow fyne.Window, progress *widget.ProgressBarInfinite, bucket string, endpoint string, region string, id string, token string, localPath string) {
 	// Implement your synchronization logic here
 	fmt.Printf("Syncing data with S3 settings - Bucket: %s, Region: %s, Token: %s\n", bucket, region, token)
 	fmt.Printf("Syncing data with S3 settings - Endpoint: %s, Id: %s\n", endpoint, id)
@@ -141,7 +147,7 @@ func syncData(myWindow fyne.Window, bucket string, endpoint string, region strin
 
 	// You can replace this with your actual synchronization logic
 	if _, err := os.Stat(localPath); err == nil {
-		err2 := sync.Sync()
+		err2 := sync.Sync(progress)
 		if err2 != nil {
 			e := errors.New(err2.Error())
 			dialog.ShowError(e, myWindow)

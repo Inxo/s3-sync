@@ -1,5 +1,7 @@
 # Sync 3000
 
+![image](./assets/screenshot.png "Screenshot")
+
 Sync 3000 is a free and open-source application designed for synchronizing data with Amazon S3 storage. This application provides a simple and user-friendly interface for configuring S3 settings and managing synchronization tasks.
 
 ## Features

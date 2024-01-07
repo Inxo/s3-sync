@@ -46,6 +46,9 @@ func (s *Sync) Do() error {
 	// Load environment variables
 	bucketName := os.Getenv("BUCKET_NAME")
 	localPath := s.LocalPath
+	if localPath == "" {
+		localPath = os.Getenv("LOCAL_PATH")
+	}
 
 	// Validate environment variables
 	if bucketName == "" || localPath == "" {

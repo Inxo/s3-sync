@@ -14,10 +14,17 @@ import (
 	"os"
 )
 
-func Sync(progress *widget.ProgressBarInfinite) error {
+type Sync struct {
+	Progress  *widget.ProgressBarInfinite
+	LocalPath string
+}
+
+func (s *Sync) Do() error {
 	wd, err := os.Getwd()
 
-	progress.Show()
+	if s.Progress != nil {
+		s.Progress.Show()
+	}
 	if err != nil {
 		log.Fatal("Cannot get working directory")
 	}
@@ -38,7 +45,7 @@ func Sync(progress *widget.ProgressBarInfinite) error {
 	}
 	// Load environment variables
 	bucketName := os.Getenv("BUCKET_NAME")
-	localPath := os.Getenv("LOCAL_PATH")
+	localPath := s.LocalPath
 
 	// Validate environment variables
 	if bucketName == "" || localPath == "" {
@@ -140,9 +147,10 @@ func Sync(progress *widget.ProgressBarInfinite) error {
 		}
 		log.Printf("Deleted object: %s", relPath)
 	}
-	//progress.Refresh()
-	progress.Stop()
-	progress.Hide()
+	if s.Progress != nil {
+		s.Progress.Stop()
+		s.Progress.Hide()
+	}
 
 	if err != nil {
 		return err

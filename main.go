@@ -20,17 +20,34 @@ import (
 )
 
 func main() {
-	myApp := app.New()
 
 	wd, err := os.Getwd()
 	if err != nil {
 		log.Fatal("Cannot get working directory")
 	}
+	// Load environment variables
 	err = godotenv.Load(wd + "/.env")
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	// Load environment variables
+	localPath := os.Getenv("LOCAL_PATH")
+	args := os.Args
+	if len(args) >= 2 && args[1] != "" {
+		localPath = args[1]
+		s := sync.Sync{
+			Progress:  nil,
+			LocalPath: localPath,
+		}
+		err := s.Do()
+		if err != nil {
+			return
+		}
+		fmt.Println("Synced: " + localPath)
+		return
+	}
+
+	myApp := app.New()
+
 	// S3 Settings Form
 	bucketEntry := widget.NewEntry()
 	bucketEntry.SetText(os.Getenv("BUCKET_NAME"))
@@ -43,7 +60,8 @@ func main() {
 	endpointEntry := widget.NewEntry()
 	endpointEntry.SetText(os.Getenv("AWS_ENDPOINT"))
 	localPathEntry := widget.NewEntry()
-	localPathEntry.SetText(os.Getenv("LOCAL_PATH"))
+	localPathEntry.SetText(localPath)
+
 	progressEntry := widget.NewProgressBarInfinite()
 	progressEntry.Hide()
 	myWindow := myApp.NewWindow("Sync 3000")
@@ -163,7 +181,11 @@ func syncData(myWindow fyne.Window, progress *widget.ProgressBarInfinite, bucket
 
 	// You can replace this with your actual synchronization logic
 	if _, err := os.Stat(localPath); err == nil {
-		err2 := sync.Sync(progress)
+		s := sync.Sync{
+			Progress:  progress,
+			LocalPath: localPath,
+		}
+		err2 := s.Do()
 		if err2 != nil {
 			e := errors.New(err2.Error())
 			dialog.ShowError(e, myWindow)

@@ -49,7 +49,7 @@ func main() {
 	localPathEntry.SetText(os.Getenv("LOCAL_PATH"))
 
 	progressEntry := widget.NewProgressBarInfinite()
-	progressEntry.Stop()
+	progressEntry.Hide()
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{
@@ -105,7 +105,7 @@ func main() {
 	myWindow.SetIcon(theme.AccountIcon())
 
 	myWindow.SetContent(container.NewVBox(
-		container.NewHBox(widget.NewLabel("Awesome Sync App - free and open source. Made ❤️ with love in 🇹🇭")),
+		container.NewHBox(widget.NewLabel("Sync App - free and open source. Made ❤️ with love in 🇹🇭")),
 		tabs,
 	))
 

@@ -16,7 +16,8 @@ import (
 
 func Sync(progress *widget.ProgressBarInfinite) error {
 	wd, err := os.Getwd()
-	progress.Start()
+
+	progress.Show()
 	if err != nil {
 		log.Fatal("Cannot get working directory")
 	}
@@ -141,6 +142,7 @@ func Sync(progress *widget.ProgressBarInfinite) error {
 	}
 	//progress.Refresh()
 	progress.Stop()
+	progress.Hide()
 
 	if err != nil {
 		return err

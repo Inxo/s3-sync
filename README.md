@@ -52,7 +52,13 @@ AWS_ACCESS_KEY_ID=key_id
 AWS_SECRET_ACCESS_KEY=access_key
 AWS_ENDPOINT=https://tw-001.s3.synologyc2.net
 AWS_REGION=tw-001
+SYNC_IGNORE_DOTS=true
 ```
+## Free Object storage
+
+- [Synology C2](https://c2.synology.com/en-uk/pricing/object-storage) - 15 Gb
+- [Cloudflare R2](https://developers.cloudflare.com/r2/pricing/) - 10 Gb
+- [Backblaze B2](https://www.backblaze.com/cloud-storage/pricing) - 10 Gb
 
 ## License
 

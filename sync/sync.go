@@ -12,14 +12,16 @@ import (
 	"inxo.ru/sync/utils"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"log"
 	"os"
 )
 
 type Sync struct {
-	Progress  *widget.ProgressBarInfinite
-	LocalPath string
+	Progress   *widget.ProgressBarInfinite
+	LocalPath  string
+	IgnoreDots bool
 }
 
 func (s *Sync) Do() error {
@@ -65,6 +67,11 @@ func (s *Sync) Do() error {
 		Region:           aws.String(os.Getenv("AWS_REGION")),
 		S3ForcePathStyle: aws.Bool(true),
 	}
+	s.IgnoreDots = false
+	ignoreDotsEnv := os.Getenv("SYNC_IGNORE_DOTS")
+	if ignoreDotsEnv == "true" {
+		s.IgnoreDots = true
+	}
 
 	// Create a new AWS session
 	sess, err := session.NewSession(s3Config)
@@ -89,9 +96,9 @@ func (s *Sync) Do() error {
 	for _, object := range listObjectsOutput.Contents {
 		existingObjects[*object.Key] = true
 	}
-	if isLocalDirEmpty(localPath) {
+	if s.isLocalDirEmpty() {
 		// Download files from S3 if the local directory is empty
-		err := downloadFromS3(svc, bucketName, localPath)
+		err := s.downloadFromS3(svc, bucketName)
 		if err != nil {
 			return err
 		}
@@ -100,6 +107,11 @@ func (s *Sync) Do() error {
 		err = filepath.Walk(localPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
+			}
+
+			fileName := filepath.Base(path)
+			if s.IgnoreDots && strings.HasPrefix(fileName, ".") {
+				return nil
 			}
 
 			// Skip directories
@@ -149,6 +161,10 @@ func (s *Sync) Do() error {
 		})
 	}
 	for relPath := range existingObjects {
+		fileName := filepath.Base(relPath)
+		if s.IgnoreDots && strings.HasPrefix(fileName, ".") {
+			return nil
+		}
 		// remove from s3
 		deleteObjectInput := &s3.DeleteObjectInput{
 			Bucket: aws.String(bucketName),
@@ -173,8 +189,8 @@ func (s *Sync) Do() error {
 	return nil
 }
 
-func isLocalDirEmpty(localPath string) bool {
-	dir, err := os.Open(localPath)
+func (s *Sync) isLocalDirEmpty() bool {
+	dir, err := os.Open(s.LocalPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -189,7 +205,7 @@ func isLocalDirEmpty(localPath string) bool {
 	return err == io.EOF
 }
 
-func downloadFromS3(client *s3.S3, bucket, localPath string) error {
+func (s *Sync) downloadFromS3(client *s3.S3, bucket string) error {
 	// List objects in the S3 bucket
 	listObjectsV2Input := s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
@@ -200,7 +216,11 @@ func downloadFromS3(client *s3.S3, bucket, localPath string) error {
 	for _, object := range objectCh.Contents {
 		// Download the object from S3
 		objectName := object.Key
-		objectPath := filepath.Join(localPath, *objectName)
+		fileName := filepath.Base(*objectName)
+		if s.IgnoreDots && strings.HasPrefix(fileName, ".") {
+			return nil
+		}
+		objectPath := filepath.Join(s.LocalPath, *objectName)
 		getInputObject := &s3.GetObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(*objectName),
@@ -212,7 +232,7 @@ func downloadFromS3(client *s3.S3, bucket, localPath string) error {
 		defer func(Body io.ReadCloser) {
 			err := Body.Close()
 			if err != nil {
-
+				return
 			}
 		}(objectOutput.Body)
 		err = os.MkdirAll(filepath.Dir(objectPath), 0755)
@@ -227,7 +247,7 @@ func downloadFromS3(client *s3.S3, bucket, localPath string) error {
 		defer func(file *os.File) {
 			err := file.Close()
 			if err != nil {
-
+				return
 			}
 		}(file)
 

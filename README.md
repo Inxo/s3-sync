@@ -28,7 +28,6 @@ cd repository
 ```bash
 go get fyne.io/fyne/v2
 go get github.com/joho/godotenv
-go get inxo.ru/sync/sync
 ```
 
 3. Build and run the application:

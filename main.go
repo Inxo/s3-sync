@@ -7,9 +7,10 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/driver/desktop"
 	"github.com/joho/godotenv"
-	"inxo.ru/sync/sync"
+	"inxo.ru/sync/syncer"
 	"log"
 	"os"
+	"path/filepath"
 
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -21,20 +22,19 @@ import (
 
 func main() {
 
-	wd, err := os.Getwd()
-	if err != nil {
-		log.Fatal("Cannot get working directory")
-	}
+	wd := filepath.Dir(os.Args[0])
 	// Load environment variables
-	err = godotenv.Load(wd + "/.env")
+	err := godotenv.Load(wd + "/.env")
+	var localPath = ""
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		localPath = wd
+	} else {
+		localPath = os.Getenv("LOCAL_PATH")
 	}
-	localPath := os.Getenv("LOCAL_PATH")
 	args := os.Args
 	if len(args) >= 2 && args[1] != "" {
 		localPath = args[1]
-		s := sync.Sync{
+		s := syncer.Sync{
 			Progress:  nil,
 			LocalPath: localPath,
 		}
@@ -181,7 +181,7 @@ func syncData(myWindow fyne.Window, progress *widget.ProgressBarInfinite, bucket
 
 	// You can replace this with your actual synchronization logic
 	if _, err := os.Stat(localPath); err == nil {
-		s := sync.Sync{
+		s := syncer.Sync{
 			Progress:  progress,
 			LocalPath: localPath,
 		}

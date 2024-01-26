@@ -1,6 +1,8 @@
 package syncer
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"fyne.io/fyne/v2/widget"
 	"github.com/aws/aws-sdk-go/aws"
@@ -119,6 +121,9 @@ func (s *Sync) Do() error {
 				return nil
 			}
 
+			// Get md5 hash
+			md5Hash, err := s.calculateLocalMD5(path)
+
 			// Get relative path
 			relPath, err := filepath.Rel(localPath, path)
 			if err != nil {
@@ -127,9 +132,16 @@ func (s *Sync) Do() error {
 
 			// Check if object already exists in the bucket
 			if _, ok := existingObjects[relPath]; ok {
-				log.Printf("Skipping existing object: %s", relPath)
-				delete(existingObjects, relPath)
-				return nil
+				// Get hash
+				md5HashS3, err := s.getObjectMetadata(svc, bucketName, relPath)
+				if err != nil {
+					return err
+				}
+				if md5HashS3 == md5Hash {
+					log.Printf("Skipping existing object: %s", relPath)
+					delete(existingObjects, relPath)
+					return nil
+				}
 			}
 
 			// Upload file to S3
@@ -144,11 +156,18 @@ func (s *Sync) Do() error {
 				}
 			}(file)
 
+			if err != nil {
+				return err
+			}
+
 			uploadObjectInput := &s3.PutObjectInput{
 				Bucket: aws.String(bucketName),
 				Key:    aws.String(relPath),
 				Body:   file,
 				ACL:    aws.String("private"),
+				Metadata: map[string]*string{
+					"md5-hash": aws.String(md5Hash),
+				},
 			}
 
 			_, err = svc.PutObject(uploadObjectInput)
@@ -188,7 +207,27 @@ func (s *Sync) Do() error {
 	log.Println("Sync completed!")
 	return nil
 }
+func (s *Sync) calculateLocalMD5(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer func(file *os.File) {
+		_ = file.Close()
+	}(file)
 
+	hash := md5.New()
+	if _, err := file.Seek(0, 0); err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	hashInBytes := hash.Sum(nil)
+	md5Hash := hex.EncodeToString(hashInBytes)
+	return md5Hash, nil
+}
 func (s *Sync) isLocalDirEmpty() bool {
 	dir, err := os.Open(s.LocalPath)
 	if err != nil {
@@ -203,6 +242,24 @@ func (s *Sync) isLocalDirEmpty() bool {
 
 	_, err = dir.Readdirnames(1)
 	return err == io.EOF
+}
+
+func (s *Sync) getObjectMetadata(client *s3.S3, bucket string, objectKey string) (string, error) {
+	// Получаем метаданные объекта
+	headObjectOutput, err := client.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(objectKey),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Извлекаем MD5 хеш из пользовательских метаданных
+	md5HashFromS3 := strings.ReplaceAll(aws.StringValue(headObjectOutput.ETag), "\"", "")
+	//if md5HashFromS3 == nil {
+	//	return "", nil
+	//}
+	return md5HashFromS3, nil
 }
 
 func (s *Sync) downloadFromS3(client *s3.S3, bucket string) error {

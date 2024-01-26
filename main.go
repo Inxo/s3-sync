@@ -5,26 +5,27 @@ import (
 	"errors"
 	"fmt"
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"github.com/joho/godotenv"
 	"inxo.ru/sync/syncer"
 	"log"
 	"os"
-	"path/filepath"
-
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/theme"
-	"fyne.io/fyne/v2/widget"
 )
 
 func main() {
 
-	wd := filepath.Dir(os.Args[0])
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalln("No work dir")
+	}
 	// Load environment variables
-	err := godotenv.Load(wd + "/.env")
+	err = godotenv.Load(wd + "/.env")
 	var localPath = ""
 	if err != nil {
 		localPath = wd
@@ -139,7 +140,7 @@ func main() {
 	myWindow.SetIcon(theme.AccountIcon())
 
 	myWindow.SetContent(container.NewVBox(
-		container.NewHBox(widget.NewLabel("Sync App - free and open source. Made ❤️ with love in 🇹🇭")),
+		container.NewHBox(widget.NewLabel("Sync App - free and open source")),
 		tabs,
 	))
 

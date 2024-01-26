@@ -32,6 +32,9 @@ func (s *Sync) Do() error {
 	if s.Progress != nil {
 		s.Progress.Show()
 	}
+	if utils.IsDebug() {
+		fmt.Println("Work directory: " + wd)
+	}
 	if err != nil {
 		log.Fatal("Cannot get working directory")
 	}
@@ -138,7 +141,10 @@ func (s *Sync) Do() error {
 					return err
 				}
 				if md5HashS3 == md5Hash {
-					log.Printf("Skipping existing object: %s", relPath)
+					if utils.IsDebug() {
+						fmt.Printf("Skipping existing object: %s\n", relPath)
+						log.Printf("Skipping existing object: %s", relPath)
+					}
 					delete(existingObjects, relPath)
 					return nil
 				}
@@ -172,7 +178,10 @@ func (s *Sync) Do() error {
 				return err
 			}
 
-			log.Printf("Uploaded object: %s", relPath)
+			if utils.IsDebug() {
+				log.Printf("Uploaded object: %s", relPath)
+				fmt.Printf("Uploaded object: %s\n", relPath)
+			}
 			return nil
 		})
 	}
@@ -181,7 +190,7 @@ func (s *Sync) Do() error {
 		if s.IgnoreDots && strings.HasPrefix(fileName, ".") {
 			return nil
 		}
-		// remove from s3
+		// remove from syncer
 		deleteObjectInput := &s3.DeleteObjectInput{
 			Bucket: aws.String(bucketName),
 			Key:    aws.String(relPath),
@@ -190,7 +199,11 @@ func (s *Sync) Do() error {
 		if err != nil {
 			return err
 		}
-		log.Printf("Deleted object: %s", relPath)
+
+		if utils.IsDebug() {
+			log.Printf("Deleted object: %s", relPath)
+			fmt.Printf("Deleted object: %s\n", relPath)
+		}
 	}
 	if s.Progress != nil {
 		s.Progress.Stop()

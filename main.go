@@ -14,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/joho/godotenv"
 	"inxo.ru/sync/syncer"
+	"inxo.ru/sync/utils"
 	"log"
 	"os"
 )
@@ -176,9 +177,11 @@ func saveData(myWindow fyne.Window, bucket string, endpoint string, region strin
 
 func syncData(myWindow fyne.Window, progress *widget.ProgressBarInfinite, bucket string, endpoint string, region string, id string, token string, localPath string) {
 	// Implement your synchronization logic here
-	fmt.Printf("Syncing data with S3 settings - Bucket: %s, Region: %s, Token: %s\n", bucket, region, token)
-	fmt.Printf("Syncing data with S3 settings - Endpoint: %s, Id: %s\n", endpoint, id)
-	fmt.Printf("Syncing data with local path: %s\n", localPath)
+	if utils.IsDebug() {
+		fmt.Printf("Syncing data with S3 settings - Bucket: %s, Region: %s, Token: %s\n", bucket, region, token)
+		fmt.Printf("Syncing data with S3 settings - Endpoint: %s, Id: %s\n", endpoint, id)
+		fmt.Printf("Syncing data with local path: %s\n", localPath)
+	}
 
 	// You can replace this with your actual synchronization logic
 	if _, err := os.Stat(localPath); err == nil {

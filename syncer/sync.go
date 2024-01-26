@@ -165,9 +165,6 @@ func (s *Sync) Do() error {
 				Key:    aws.String(relPath),
 				Body:   file,
 				ACL:    aws.String("private"),
-				Metadata: map[string]*string{
-					"md5-hash": aws.String(md5Hash),
-				},
 			}
 
 			_, err = svc.PutObject(uploadObjectInput)

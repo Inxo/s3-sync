@@ -5,12 +5,12 @@ go 1.21
 toolchain go1.21.2
 
 require (
+	fyne.io/fyne/v2 v2.4.3
 	github.com/aws/aws-sdk-go v1.48.15
 	github.com/joho/godotenv v1.5.1
 )
 
 require (
-	fyne.io/fyne/v2 v2.4.3 // indirect
 	fyne.io/systray v1.10.1-0.20231115130155-104f5ef7839e // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fredbi/uri v1.0.0 // indirect

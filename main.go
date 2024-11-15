@@ -48,7 +48,7 @@ func main() {
 		return
 	}
 
-	myApp := app.New()
+	myApp := app.NewWithID("com.n32b.capysync")
 
 	// S3 Settings Form
 	bucketEntry := widget.NewEntry()
@@ -66,7 +66,7 @@ func main() {
 
 	progressEntry := widget.NewProgressBarInfinite()
 	progressEntry.Hide()
-	myWindow := myApp.NewWindow("Sync 3000")
+	myWindow := myApp.NewWindow("Capy Sync")
 
 	saveShort := func() {
 		// Handle form submission
@@ -192,7 +192,9 @@ func syncData(myWindow fyne.Window, progress *widget.ProgressBarInfinite, bucket
 		err2 := s.Do()
 		if err2 != nil {
 			e := errors.New(err2.Error())
+			s.Progress.Stop()
 			dialog.ShowError(e, myWindow)
+
 		} else {
 			dialog.ShowInformation("Sync Success", "Data synchronized successfully!", myWindow)
 		}

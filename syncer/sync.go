@@ -31,6 +31,7 @@ func (s *Sync) Do() error {
 
 	if s.Progress != nil {
 		s.Progress.Show()
+		s.Progress.Start()
 	}
 	if utils.IsDebug() {
 		fmt.Println("Work directory: " + wd)
@@ -66,8 +67,10 @@ func (s *Sync) Do() error {
 		return err
 	}
 
+	key := os.Getenv("AWS_ACCESS_KEY_ID")
+	secret := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), ""),
+		Credentials:      credentials.NewStaticCredentials(key, secret, ""),
 		Endpoint:         aws.String(os.Getenv("AWS_ENDPOINT")),
 		Region:           aws.String(os.Getenv("AWS_REGION")),
 		S3ForcePathStyle: aws.Bool(true),
